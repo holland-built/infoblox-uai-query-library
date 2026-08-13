@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/IngmarVG-IB/infoblox-uai-query-library/queries/schema.json",
+  "title": "UAI Query Library catalog",
+  "type": "object",
+  "required": ["catalogVersion", "queries"],
+  "properties": {
+    "catalogVersion": {
+      "type": "string",
+      "description": "Semver of the catalog itself, bumped whenever queries change."
+    },
+    "queries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/query" }
+    }
+  },
+  "$defs": {
+    "query": {
+      "type": "object",
+      "required": ["id", "title", "category", "query", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Stable kebab-case identifier. Never reuse an id for a different query."
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable name, shown in the picker and used as the Saved Filter name."
+        },
+        "category": {
+          "type": "string",
+          "description": "Grouping heading in the picker panel."
+        },
+        "query": {
+          "type": "string",
+          "description": "The UAI Advanced Mode query string. May contain {{param:name}} placeholders."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the query finds and why it matters operationally."
+        },
+        "bestUsedFor": {
+          "type": "string",
+          "description": "Which conversation or workflow this query fits."
+        },
+        "proof": {
+          "type": "string",
+          "description": "How to verify a match by drilling into the raw provider attributes behind it."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-form tags used by the picker's search box."
+        },
+        "requiresProviders": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Providers that must be integrated for this query to return meaningful results. The picker greys out queries whose providers are absent from the current tenant."
+        },
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/param" },
+          "description": "User-adjustable values substituted into the query before it runs."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["workbook", "derived", "community"],
+          "description": "Where the query came from. 'derived' means authored against the documented UAI schema."
+        },
+        "verified": {
+          "type": "string",
+          "enum": ["counted", "syntax-only", "unverified"],
+          "description": "How far this query has been checked. 'counted' means it was run against a live tenant and returned a sensible, hand-checked count. 'syntax-only' means it ran without error but the tenant lacked the data to confirm the result is meaningful. 'unverified' means it has not been run."
+        }
+      }
+    },
+    "param": {
+      "type": "object",
+      "required": ["name", "label", "type", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9]*$",
+          "description": "Referenced in the query string as {{param:name}}."
+        },
+        "label": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "relativeDate"],
+          "description": "relativeDate takes a negative integer number of days and renders as a UAI-formatted date."
+        },
+        "default": { "type": ["string", "integer"] },
+        "min": { "type": "integer" },
+        "max": { "type": "integer" }
+      }
+    }
+  }
+}

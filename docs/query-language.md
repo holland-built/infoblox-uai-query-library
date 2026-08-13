@@ -1,0 +1,145 @@
+# UAI Advanced Mode query language reference
+
+Notes on the Asset Inventory **Advanced Mode** filter language, gathered by inspecting a live tenant. This is not official documentation and Infoblox may change any of it without notice.
+
+The filter bar is a [Monaco](https://microsoft.github.io/monaco-editor/) editor whose language id is **`filterel`**. Queries are compiled client-side into [Cube.js](https://cube.dev/) queries against an `AssetDetails_ch_agg` cube.
+
+## Shape of a query
+
+```
+<field> <operator> <value>
+```
+
+joined with `AND` / `OR`, grouped with parentheses:
+
+```
+asset.Type IN ["Laptop", "Workstation"] AND asset.OSType IN ["Windows"]
+(asset.Confidence IN ["Low"]) OR (asset.Classifications IN ["Zombie"])
+```
+
+Field names may be written bare (`Type`) or namespaced (`asset.Type`). Both are accepted. Namespaced is preferred in this library: it is unambiguous, and it is the form the editor's autocomplete offers.
+
+Operator keywords are conventionally uppercase. String values are double-quoted; list values go in `[ ... ]`.
+
+## Namespaces
+
+| Namespace | Contents |
+|---|---|
+| `asset.` | The normalised, reconciled asset record. Always present. |
+| `<provider>.` | Raw provider attributes, e.g. `servicenow.`, `crowdstrike_falcon.`, `intune.`, `jamf.`. Only present when that provider is integrated in the tenant. |
+
+Provider namespaces expose the provider's own JSON structure verbatim, so paths are deep and provider-specific:
+
+```
+crowdstrike_falcon.crowdstrike_falcon_devices.device_policies.firewall.applied != "true"
+```
+
+**Autocomplete is tenant-scoped.** The editor only offers namespaces and values that exist in the tenant you are signed in to. A tenant with no Jamf integration will not suggest — and cannot usefully filter on — `jamf.*`.
+
+## Operators
+
+| Kind | Operators |
+|---|---|
+| String / enum | `=`, `IS`, `ISNOT`, `IN`, `NOTIN`, `CONTAINS`, `DOESNOTCONTAIN` |
+| Date | `ONDATE`, `AFTERDATE`, `BEFOREDATE`, `INDATERANGE`, `NOTINDATERANGE` |
+| Logical | `AND`, `OR` |
+
+`!=` is also accepted on raw provider attributes.
+
+Dates are written `MM-DD-YYYY`:
+
+```
+asset.LastSeen AFTERDATE 08-01-2026
+```
+
+`EMPTY` is a sentinel value meaning the field has no value:
+
+```
+asset.SerialNumber IS "EMPTY"
+```
+
+## `asset.` fields
+
+The normalised schema, as offered by autocomplete:
+
+```
+CIDR                      LocationType              OSEndOfSecuritySupport
+Classifications           MACAddresses              OSType
+CloudAccountID            Managed                   OSVersion
+Confidence                MissingRecords            OverallStatus
+DHCPFingerprint           Model                     Providers
+DiscoveryHost             Name                      ProvidersLabel
+FirstSeen                 OperatingSystem           Region
+FirstSync                 OSBuild                   RegistrationStatus
+IPAddresses               OSEndOfLife               SerialNumber
+LastSeen                  OSEndOfSale               Source
+LastSync                  SubClassifications        Tags
+Location                  Type                      UserCount
+                                                    Vendor
+```
+
+## Value vocabularies
+
+Values below are those the product defines. Which ones actually appear depends on the tenant.
+
+**`Confidence`** — `High`, `Medium`, `Low`, `EMPTY`
+
+**`OverallStatus`** — `OK`, `ERROR`, `EMPTY`
+
+**`LocationType`** — `Cloud`, `Onprem`, `EMPTY`
+
+**`MissingRecords`** — `DNS Forward Record`, `DNS Pointer Record`, `IPAM`, `EMPTY`
+
+**`OSType`** — `Windows`, `macOS`, `Linux`, `iOS`, `iPadOS`, `Android`, `VMware`, `Network OS`, `Embedded`, `Tizen`, `Axis`, `EMPTY`
+
+**`Classifications`** — UAI's own insight taxonomy: `Zombie`, `Noncompliant`, `EMPTY`
+
+**`SubClassifications`** — `Orphan`, `Public Access`, `Unencrypted`, `Resource Utilization Idle`, `Resource Utilization Low`, `EMPTY`
+
+**`Type`** — the device taxonomy:
+
+```
+Cloud NAT              Internet Gateway              Smart Door Bell     Streaming Device
+Cloud Security Group   Laptop                        Smart Plug          Surveillance Camera
+Desktop                Network Application Server    Smart Speaker       Switch
+DNS Server             PDU                           Smart TV            Tablet
+End User Device        Printer                       Smartphone          Unclassified
+Gateway                Public IP Address             Storage Bucket      Virtual Machine
+Generic IoT            Router                        Storage Volume      VoIP Phone
+Hypervisor Host        Server                        Set-Top-Box         VPN Gateway
+                       Smart Controller                                  Wireless Access Point
+                                                                         Workstation
+```
+
+## Behaviour worth knowing
+
+**The default `Managed IS "True"` filter.** Asset Inventory ships with this filter applied. Clear it before pasting a query that is already scoped, or the two combine and you get fewer results than you expect.
+
+**A rolling time window.** The inventory view scopes results to assets whose `updated_at` falls in a trailing window (7 days in the tenant inspected). Counts are "assets seen recently", not "all assets ever".
+
+**Advanced queries are one-way.** Once a query uses advanced syntax, the UI cannot convert it back to Basic Mode. It says so in a tooltip on the Basic Mode link.
+
+**There is no client-side validation.** The editor registers no diagnostics: malformed queries produce no error markers and do not disable Apply. Mistakes surface only when the query reaches the server. Verify a query by running it and sanity-checking the count, not by trusting that it parsed.
+
+## Filter state in the URL
+
+Asset Inventory keeps filter state in the URL hash:
+
+```
+#/workspace/assets/details/managed-assets?isAdvanced=true&advancedFilterValue=<encoded>&filter_items=<encoded>
+```
+
+Both encoded values are `JSON.stringify`'d and then compressed with [lz-string](https://github.com/pieroxy/lz-string)'s `compressToEncodedURIComponent`. So:
+
+```js
+advancedFilterValue = LZString.compressToEncodedURIComponent(JSON.stringify(queryText))
+```
+
+This is what makes shareable query links possible — construct that URL and send it to anyone with tenant access.
+
+Two limits, both confirmed by testing:
+
+- The link **pre-loads** the query into the Advanced Mode filter bar. It does not run it; the recipient still presses Apply.
+- The URL is only read on a **full page load**. Changing the hash in an already-open tab is ignored, because the SPA does not re-read filter state on hash change.
+
+Applying an advanced query also back-fills `filter_items` with an equivalent basic-mode representation, which is where the underlying Cube dimension names are visible (`AssetDetails_ch_agg.providers`, `.taxonomy_types`, `.os_type`, and so on).

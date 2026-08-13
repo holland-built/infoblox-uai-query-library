@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.*
+scratch/
+
+# dist/ is deliberately committed: the one-click install link in the README
+# points at dist/uai-query-library.user.js on the default branch.

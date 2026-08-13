@@ -1,0 +1,572 @@
+{
+  "$schema": "./schema.json",
+  "catalogVersion": "0.1.0",
+  "queries": [
+    {
+      "id": "missing-from-servicenow",
+      "title": "Assets Missing from ServiceNow",
+      "category": "CMDB Reconciliation",
+      "query": "Providers NOTIN [\"ServiceNow\"]",
+      "description": "Any asset type with no ServiceNow record at all, regardless of ownership or device class. Not devices that are wrong in the CMDB — devices that are entirely absent from it. The broadest CMDB-completeness check there is.",
+      "bestUsedFor": "Broad CMDB-hygiene conversations, and a strong opener with anyone who has not yet questioned their CMDB's completeness.",
+      "tags": [
+        "cmdb",
+        "servicenow",
+        "coverage",
+        "opener"
+      ],
+      "requiresProviders": [
+        "ServiceNow"
+      ],
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "managed-fleet-not-in-servicenow",
+      "title": "Assets in EDR/MDM Fleet but Not in ServiceNow",
+      "category": "CMDB Reconciliation",
+      "query": "Type IN [\"Laptop\", \"Workstation\"] AND Providers CONTAINS \"CrowdStrike Falcon\" AND (Providers CONTAINS \"Microsoft Intune\" OR Providers CONTAINS \"Jamf Pro\") AND Providers NOTIN [\"ServiceNow\"]",
+      "description": "Laptops and workstations that are already confirmed managed devices — covered by CrowdStrike for security and by Intune or Jamf for device management — yet have no ServiceNow record at all. Unlike a generic 'missing from CMDB' check, this rules out the 'maybe it is just noise' objection: these are devices the security and MDM stack already trusts.",
+      "bestUsedFor": "CMDB-completeness conversations with IT and security leaders who assume anything actively managed is automatically tracked in the CMDB.",
+      "tags": [
+        "cmdb",
+        "servicenow",
+        "edr",
+        "mdm",
+        "crowdstrike",
+        "intune",
+        "jamf"
+      ],
+      "requiresProviders": [
+        "ServiceNow",
+        "CrowdStrike Falcon"
+      ],
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "retired-in-cmdb-still-on-network",
+      "title": "Asset Marked as Retired in CMDB but Seen on the Network",
+      "category": "CMDB Reconciliation",
+      "query": "servicenow.servicenow_computers.install_status = \"retired\" AND asset.LastSeen AFTERDATE {{param:seenSince}}",
+      "description": "Cross-references ServiceNow's CMDB lifecycle status against real-time network telemetry, flagging any device marked 'Retired' that is still active on the network. A retired device is off the patch schedule, off the vulnerability scan roster and has no assigned owner — but if it is still connected, it is a live, unmonitored attack surface sitting in the blind spot between the IT and security teams.",
+      "bestUsedFor": "IT Asset Management and CMDB-hygiene conversations, especially with teams confident their CMDB is accurate. Requires two independent systems to agree, which a single provider console cannot replicate on its own.",
+      "tags": [
+        "cmdb",
+        "servicenow",
+        "lifecycle",
+        "telemetry",
+        "ghost-assets"
+      ],
+      "requiresProviders": [
+        "ServiceNow"
+      ],
+      "params": [
+        {
+          "name": "seenSince",
+          "label": "Seen on the network since (days ago)",
+          "type": "relativeDate",
+          "default": -14,
+          "min": -365,
+          "max": -1
+        }
+      ],
+      "proof": "Open one matching asset, expand its ServiceNow raw attributes, and point at install_status plus last_discovered — the two fields that produced the match.",
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "byod-devices",
+      "title": "BYOD / Unenrolled Personal Devices",
+      "category": "Shadow IT",
+      "query": "Type IN [\"Laptop\", \"Workstation\", \"Smartphone\", \"Tablet\"] AND Providers NOTIN [\"CrowdStrike Falcon\", \"ServiceNow\", \"Tenable\", \"Jamf Pro\", \"Microsoft Intune\"]",
+      "description": "Laptops, workstations, smartphones and tablets — the device types people actually bring to work — that show zero presence across five core providers at once. A device this invisible was never enrolled anywhere, which is the clearest available signal of a personal device connecting to corporate resources.",
+      "bestUsedFor": "BYOD and shadow-IT visibility conversations with anyone who wants to know what is connecting to their network outside every managed channel.",
+      "tags": [
+        "byod",
+        "shadow-it",
+        "unmanaged",
+        "coverage"
+      ],
+      "requiresProviders": [],
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "windows-macos-eol",
+      "title": "Windows and macOS End-of-Life Devices",
+      "category": "Lifecycle & Patch Hygiene",
+      "query": "(OperatingSystem IS [\"Windows 11\"] AND OSVersion = \"{{param:winVersion}}\") OR (OperatingSystem CONTAINS \"macOS\" AND OSVersion IS \"{{param:macVersion}}\")",
+      "description": "Combines a Windows 11 build-level lifecycle check with a macOS point-release lifecycle check into one cross-platform query. Uses normalised OS and version fields across both providers, showing lifecycle risk for the whole fleet instead of one platform at a time.",
+      "bestUsedFor": "Windows and Apple lifecycle / patch-hygiene conversations with anyone running a mixed fleet who tracks OS upgrades platform by platform today.",
+      "tags": [
+        "lifecycle",
+        "eol",
+        "patching",
+        "windows",
+        "macos",
+        "cross-platform"
+      ],
+      "requiresProviders": [],
+      "params": [
+        {
+          "name": "winVersion",
+          "label": "Windows 11 build to flag",
+          "type": "string",
+          "default": "22H2"
+        },
+        {
+          "name": "macVersion",
+          "label": "macOS version to flag",
+          "type": "string",
+          "default": "13.7.8"
+        }
+      ],
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "laptops-disk-encryption-off",
+      "title": "Corporate Managed Laptops with Disk Encryption Off",
+      "category": "Compliance",
+      "query": "(intune.intune_managed_devices.device_health_attestation_state.bitLockerStatus = \"PROTECTION_OFF\") OR (jamf.jamf_computers_inventory.disk_encryption.bootPartitionEncryptionDetails.partitionFileVault2State != \"ENCRYPTED\")",
+      "description": "Combines Jamf's FileVault state for Macs with Intune's BitLocker protection state for Windows into a single cross-provider query — one filter covering both platforms instead of two separate checks. Full-disk encryption is a regulatory baseline; MDM enrolment alone does not guarantee it is actually switched on, on either platform.",
+      "bestUsedFor": "Compliance-driven conversations (PCI-DSS, HIPAA, SOC 2, ISO 27001) with regulated organisations running mixed Mac and Windows fleets.",
+      "tags": [
+        "compliance",
+        "encryption",
+        "bitlocker",
+        "filevault",
+        "intune",
+        "jamf",
+        "cross-platform"
+      ],
+      "requiresProviders": [
+        "Microsoft Intune",
+        "Jamf Pro"
+      ],
+      "proof": "Open a Jamf-discovered asset and find partitionFileVault2State: NOT_ENCRYPTED in its raw attributes; open an Intune-discovered asset and find bitLockerStatus: PROTECTION_OFF.",
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "crowdstrike-firewall-and-prevention-off",
+      "title": "CrowdStrike Firewall Not Running and Prevention Policy Not Applied",
+      "category": "Security Control Gaps",
+      "query": "crowdstrike_falcon.crowdstrike_falcon_devices.device_policies.prevention.applied != \"true\" AND crowdstrike_falcon.crowdstrike_falcon_devices.device_policies.firewall.applied != \"true\"",
+      "description": "Stacks two raw CrowdStrike policy attributes — firewall and prevention (real-time malware and threat blocking) — to isolate devices where both controls are inactive at once. A device missing both is an unprotected endpoint hiding inside the EDR tool itself: it can execute malware, allow lateral movement, and never trigger an alert.",
+      "bestUsedFor": "Technical validation calls and POCs with security architects who want proof of compound, cross-attribute querying against raw provider data.",
+      "tags": [
+        "edr",
+        "crowdstrike",
+        "policy",
+        "security-gap",
+        "compound"
+      ],
+      "requiresProviders": [
+        "CrowdStrike Falcon"
+      ],
+      "source": "workbook",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "missing-dns-forward-record",
+      "title": "Assets with No Forward DNS Record",
+      "category": "DDI Hygiene",
+      "query": "asset.MissingRecords IN [\"DNS Forward Record\"]",
+      "description": "Assets that are live on the network but have no A/AAAA record. Anything here is reachable by address but not by name, which breaks certificate issuance, log correlation and every runbook that assumes a hostname resolves.",
+      "bestUsedFor": "DDI hygiene reviews, and the most direct way to show that asset visibility and DNS data are the same conversation.",
+      "tags": [
+        "dns",
+        "ddi",
+        "hygiene",
+        "records"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "missing-dns-ptr-record",
+      "title": "Assets with No Reverse DNS Record",
+      "category": "DDI Hygiene",
+      "query": "asset.MissingRecords IN [\"DNS Pointer Record\"]",
+      "description": "Assets with no PTR record. Reverse lookups underpin mail acceptance, SIEM enrichment and most network forensics — an address that will not resolve backwards turns every investigation into manual work.",
+      "bestUsedFor": "Security operations conversations about log and alert enrichment quality.",
+      "tags": [
+        "dns",
+        "ddi",
+        "ptr",
+        "reverse",
+        "hygiene"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "missing-ipam-record",
+      "title": "Assets with No IPAM Record",
+      "category": "DDI Hygiene",
+      "query": "asset.MissingRecords IN [\"IPAM\"]",
+      "description": "Assets holding an address that IPAM does not know about. These are the addresses that cause duplicate-allocation incidents, because the system of record believes they are free.",
+      "bestUsedFor": "IPAM accuracy conversations, particularly where address exhaustion or allocation conflicts have already caused an outage.",
+      "tags": [
+        "ipam",
+        "ddi",
+        "addressing",
+        "hygiene"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "missing-any-core-record",
+      "title": "Assets Missing Any Core DNS or IPAM Record",
+      "category": "DDI Hygiene",
+      "query": "asset.MissingRecords IN [\"DNS Forward Record\", \"DNS Pointer Record\", \"IPAM\"]",
+      "description": "The union of the three record-gap checks: every asset missing at least one of forward DNS, reverse DNS or IPAM. The single number that sizes the whole DDI hygiene problem.",
+      "bestUsedFor": "Opening a DDI hygiene conversation with one figure before breaking it down by record type.",
+      "tags": [
+        "dns",
+        "ipam",
+        "ddi",
+        "hygiene",
+        "opener"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "zombie-assets",
+      "title": "Zombie Assets",
+      "category": "Insight Classifications",
+      "query": "asset.Classifications IN [\"Zombie\"]",
+      "description": "Assets that UAI has itself classified as zombies — present and consuming address space or resources, but showing none of the signals of something genuinely in service. The product's own answer to the 'retired but still connected' problem, without needing a CMDB integration to find it.",
+      "bestUsedFor": "Anyone who liked the retired-in-CMDB story but has no ServiceNow integration to run it against.",
+      "tags": [
+        "zombie",
+        "lifecycle",
+        "cleanup",
+        "insights"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "unencrypted-assets",
+      "title": "Assets Flagged as Unencrypted",
+      "category": "Insight Classifications",
+      "query": "asset.SubClassifications IN [\"Unencrypted\"]",
+      "description": "Assets UAI has classified as unencrypted, using whichever provider signal is available for that asset. Reaches the same conclusion as the BitLocker and FileVault query without hardcoding either provider's field path, so it keeps working as the provider mix changes.",
+      "bestUsedFor": "Compliance conversations in tenants that do not have both Intune and Jamf integrated.",
+      "tags": [
+        "encryption",
+        "compliance",
+        "insights",
+        "cross-platform"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "orphaned-assets",
+      "title": "Orphaned Assets",
+      "category": "Insight Classifications",
+      "query": "asset.SubClassifications IN [\"Orphan\"]",
+      "description": "Assets with no owning parent resource — typically cloud objects left behind when the thing that created them was deleted. They keep costing money and keep holding addresses.",
+      "bestUsedFor": "Cloud cost and cloud hygiene conversations, where the finding has a direct currency value attached.",
+      "tags": [
+        "cloud",
+        "orphan",
+        "cost",
+        "cleanup",
+        "insights"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "publicly-accessible-assets",
+      "title": "Publicly Accessible Assets",
+      "category": "Insight Classifications",
+      "query": "asset.SubClassifications IN [\"Public Access\"]",
+      "description": "Assets UAI has determined are reachable from the public internet. The exposure list, derived from reconciled cloud and network data rather than from an external scan.",
+      "bestUsedFor": "Attack-surface conversations, and a natural bridge into external attack surface management.",
+      "tags": [
+        "exposure",
+        "attack-surface",
+        "cloud",
+        "insights",
+        "security"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "idle-cloud-resources",
+      "title": "Idle and Underused Cloud Resources",
+      "category": "Insight Classifications",
+      "query": "asset.SubClassifications IN [\"Resource Utilization Idle\", \"Resource Utilization Low\"]",
+      "description": "Cloud resources running at idle or consistently low utilisation. Every one is a live bill with no corresponding workload.",
+      "bestUsedFor": "FinOps and cloud-cost conversations, where asset visibility pays for itself in the first month.",
+      "tags": [
+        "cloud",
+        "cost",
+        "finops",
+        "utilisation",
+        "insights"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "noncompliant-assets",
+      "title": "Assets Classified as Noncompliant",
+      "category": "Insight Classifications",
+      "query": "asset.Classifications IN [\"Noncompliant\"]",
+      "description": "Assets failing UAI's own compliance classification. A useful starting point before narrowing to a specific control with the sub-classification queries.",
+      "bestUsedFor": "Broad compliance-posture conversations, as the parent number the more specific findings sit underneath.",
+      "tags": [
+        "compliance",
+        "insights",
+        "posture"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "stale-assets",
+      "title": "Assets Not Seen Recently",
+      "category": "Discovery Hygiene",
+      "query": "asset.LastSeen BEFOREDATE {{param:notSeenSince}}",
+      "description": "Assets whose last network sighting predates the chosen date. Either they have genuinely left the estate and the record should be retired, or discovery has stopped seeing a part of the network it used to cover. Both are worth knowing.",
+      "bestUsedFor": "Data-quality reviews, and for separating real decommissions from silent discovery gaps.",
+      "tags": [
+        "stale",
+        "lifecycle",
+        "discovery",
+        "data-quality"
+      ],
+      "requiresProviders": [],
+      "params": [
+        {
+          "name": "notSeenSince",
+          "label": "Not seen since (days ago)",
+          "type": "relativeDate",
+          "default": -7,
+          "min": -365,
+          "max": -1
+        }
+      ],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "unclassified-assets",
+      "title": "Unclassified Assets",
+      "category": "Discovery Hygiene",
+      "query": "asset.Type IN [\"Unclassified\"]",
+      "description": "Assets present on the network that UAI could not assign a device type to. Each one is something connected that nobody can describe — the raw material of every shadow-IT and unmanaged-device conversation.",
+      "bestUsedFor": "Showing that 'we have full visibility' and 'we can identify everything we see' are different claims.",
+      "tags": [
+        "unclassified",
+        "shadow-it",
+        "discovery",
+        "unknown"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "low-confidence-identification",
+      "title": "Assets Identified with Low Confidence",
+      "category": "Discovery Hygiene",
+      "query": "asset.Confidence IN [\"Low\", \"EMPTY\"]",
+      "description": "Assets whose identification UAI is not confident about. Distinct from unclassified: these have a guessed type that may well be wrong, so they are the records most likely to mislead an inventory report.",
+      "bestUsedFor": "Data-quality conversations with teams who plan to drive automation off asset attributes.",
+      "tags": [
+        "confidence",
+        "data-quality",
+        "discovery"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "no-serial-number",
+      "title": "Assets with No Serial Number",
+      "category": "Discovery Hygiene",
+      "query": "asset.SerialNumber IS \"EMPTY\"",
+      "description": "Assets with no serial number recorded. Serial number is the join key most asset-management, warranty and procurement processes depend on; without it, an asset cannot be tied back to a purchase or a support contract.",
+      "bestUsedFor": "ITAM conversations about reconciling technical inventory against procurement and warranty records.",
+      "tags": [
+        "itam",
+        "serial",
+        "data-quality",
+        "procurement"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "assets-in-error-state",
+      "title": "Assets Reporting an Error State",
+      "category": "Discovery Hygiene",
+      "query": "asset.OverallStatus IN [\"ERROR\"]",
+      "description": "Assets whose overall status is an error. Worth clearing before quoting any other number from the inventory, since these records are the least likely to be accurate.",
+      "bestUsedFor": "Housekeeping ahead of a data-quality review or a QBR that will put inventory figures on a slide.",
+      "tags": [
+        "errors",
+        "data-quality",
+        "housekeeping"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "os-past-end-of-life",
+      "title": "Operating Systems Past End of Life",
+      "category": "Lifecycle & Patch Hygiene",
+      "query": "asset.OSEndOfLife BEFOREDATE {{param:asOf}}",
+      "description": "Every asset whose OS is already past its end-of-life date, using UAI's own lifecycle data rather than a hardcoded version string. Unlike a query naming specific builds, this one does not rot: it stays correct as new versions reach end of life.",
+      "bestUsedFor": "Lifecycle conversations across a mixed fleet, and as the durable replacement for version-specific EOL filters.",
+      "tags": [
+        "eol",
+        "lifecycle",
+        "patching",
+        "cross-platform"
+      ],
+      "requiresProviders": [],
+      "params": [
+        {
+          "name": "asOf",
+          "label": "As of (days from today)",
+          "type": "relativeDate",
+          "default": 0,
+          "min": -365,
+          "max": 365
+        }
+      ],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "os-past-security-support",
+      "title": "Operating Systems Past End of Security Support",
+      "category": "Lifecycle & Patch Hygiene",
+      "query": "asset.OSEndOfSecuritySupport BEFOREDATE {{param:asOf}}",
+      "description": "Assets running an OS that no longer receives security fixes. A stricter and more urgent cut than end of life: these will never be patched again, whatever the vulnerability.",
+      "bestUsedFor": "Risk conversations where the question is not 'is it old' but 'can it still be fixed'.",
+      "tags": [
+        "eol",
+        "security",
+        "lifecycle",
+        "patching",
+        "risk"
+      ],
+      "requiresProviders": [],
+      "params": [
+        {
+          "name": "asOf",
+          "label": "As of (days from today)",
+          "type": "relativeDate",
+          "default": 0,
+          "min": -365,
+          "max": 365
+        }
+      ],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "os-approaching-end-of-life",
+      "title": "Operating Systems Approaching End of Life",
+      "category": "Lifecycle & Patch Hygiene",
+      "query": "asset.OSEndOfLife BEFOREDATE {{param:horizon}}",
+      "description": "Assets whose OS reaches end of life inside the chosen planning horizon. The forward-looking counterpart to the past-EOL query — the same data, used to plan an upgrade instead of to report a failure.",
+      "bestUsedFor": "Budget and upgrade-planning conversations, where a dated list is more use than a count of what is already overdue.",
+      "tags": [
+        "eol",
+        "lifecycle",
+        "planning",
+        "budget"
+      ],
+      "requiresProviders": [],
+      "params": [
+        {
+          "name": "horizon",
+          "label": "Planning horizon (days from today)",
+          "type": "relativeDate",
+          "default": 90,
+          "min": 1,
+          "max": 730
+        }
+      ],
+      "source": "derived",
+      "verified": "syntax-only"
+    },
+    {
+      "id": "iot-and-ot-devices",
+      "title": "IoT and OT Devices on the Network",
+      "category": "Estate Composition",
+      "query": "asset.Type IN [\"Generic IoT\", \"Surveillance Camera\", \"Smart TV\", \"Smart Speaker\", \"Smart Plug\", \"Smart Door Bell\", \"Smart Controller\", \"Set-Top-Box\", \"Streaming Device\", \"VoIP Phone\", \"Printer\", \"PDU\"]",
+      "description": "Every device class that generally cannot run an agent: cameras, printers, phones, building controllers, smart-home hardware. None of it will ever appear in an EDR console, so for most organisations this is the part of the estate no security tool inventories.",
+      "bestUsedFor": "IoT and OT visibility conversations, especially where the security stack is entirely agent-based.",
+      "tags": [
+        "iot",
+        "ot",
+        "agentless",
+        "unmanaged",
+        "visibility"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "network-infrastructure",
+      "title": "Network Infrastructure Inventory",
+      "category": "Estate Composition",
+      "query": "asset.Type IN [\"Router\", \"Switch\", \"Wireless Access Point\", \"Gateway\", \"VPN Gateway\"]",
+      "description": "The routing, switching and wireless estate as UAI sees it. Useful as a cross-check against whatever the network team believes is deployed, and as the denominator for network-device lifecycle work.",
+      "bestUsedFor": "Network-team conversations, and reconciling discovered infrastructure against the documented topology.",
+      "tags": [
+        "network",
+        "infrastructure",
+        "inventory"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "counted"
+    },
+    {
+      "id": "cloud-assets",
+      "title": "Cloud-Hosted Assets",
+      "category": "Estate Composition",
+      "query": "asset.LocationType IN [\"Cloud\"]",
+      "description": "Everything UAI places in a cloud provider rather than on-premises. The starting point for splitting any other finding along the cloud/on-prem boundary, which is usually where ownership changes hands.",
+      "bestUsedFor": "Scoping conversations where cloud and on-prem estates have different owners, tools and standards.",
+      "tags": [
+        "cloud",
+        "estate",
+        "scoping"
+      ],
+      "requiresProviders": [],
+      "source": "derived",
+      "verified": "syntax-only"
+    }
+  ]
+}

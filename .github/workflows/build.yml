@@ -1,0 +1,30 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Validates the catalog: unique ids, balanced quotes/brackets/parens,
+      # parameters declared and used, a recognised operator present.
+      - name: Build
+        run: node build/build.mjs
+
+      # The install link points at dist/ on the default branch, so a stale
+      # dist/ means people install a version that does not match the source.
+      - name: Check dist is up to date
+        run: |
+          if ! git diff --quiet -- dist/; then
+            echo "dist/ is out of date. Run 'node build/build.mjs' and commit the result."
+            git diff --stat -- dist/
+            exit 1
+          fi
