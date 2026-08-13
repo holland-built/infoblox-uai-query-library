@@ -148,6 +148,14 @@ Hypervisor Host        Server                        Set-Top-Box         VPN Gat
 
 **There is no client-side validation.** The editor registers no diagnostics: malformed queries produce no error markers and do not disable Apply. Mistakes surface only when the query reaches the server. Verify a query by running it and sanity-checking the count, not by trusting that it parsed.
 
+## Saved Filters
+
+The Save control next to the filter bar stores the current query as a named Saved Filter, listed under **Saved Filters** and manageable from the row menu there (Run Now, Mark as Favorite, Clone, Delete — Delete takes effect immediately, with no confirmation step).
+
+**Names are capped at 50 characters, and the cap fails silently.** Measured on a live tenant: a 50-character name saves; a 51-character name does not, the popover closes as though it worked, and nothing appears in the list. There is no error message.
+
+This is worth knowing beyond this project, because the obvious way to script bulk creation — click Save, type a name, click Save, assume it worked — will report complete success while quietly dropping every entry with a long name. Four of twenty-two went missing that way before the cause was found. Always read the list back.
+
 ## Filter state in the URL
 
 Asset Inventory keeps filter state in the URL hash:

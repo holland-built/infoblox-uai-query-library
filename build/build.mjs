@@ -17,6 +17,9 @@ const SRC = join(root, 'src', 'uai-query-library.user.js');
 const CATALOG = join(root, 'queries', 'catalog.json');
 const OUT = join(root, 'dist', 'uai-query-library.user.js');
 
+const SAVED_FILTER_PREFIX = '[Library]';
+const SAVED_FILTER_MAX_NAME = 50;
+
 const VALID_OPERATORS = [
   '=', '!=', 'IS', 'ISNOT', 'IN', 'NOTIN', 'CONTAINS', 'DOESNOTCONTAIN',
   'ONDATE', 'AFTERDATE', 'BEFOREDATE', 'INDATERANGE', 'NOTINDATERANGE',
@@ -68,6 +71,18 @@ function validate(catalog) {
 
     if (!VALID_OPERATORS.some((op) => (q.query || '').includes(op))) {
       errors.push(`${at}: query contains no recognised operator`);
+    }
+
+    // The product silently discards Saved Filters whose name exceeds 50
+    // characters, so catch it here rather than at install time.
+    if (!q.params?.length) {
+      const name = `${SAVED_FILTER_PREFIX} ${q.savedFilterName || q.title}`;
+      if (name.length > SAVED_FILTER_MAX_NAME) {
+        errors.push(
+          `${at}: Saved Filter name is ${name.length} chars (limit ${SAVED_FILTER_MAX_NAME}). `
+          + `Add a shorter "savedFilterName".`,
+        );
+      }
     }
   }
   return errors;

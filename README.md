@@ -16,7 +16,7 @@ Questions like:
 
 28 of them, each with a plain-English explanation of what it finds and why it matters.
 
-> **This is a community project.** It is not an official Infoblox product, is not supported by Infoblox, and is not endorsed by or affiliated with Infoblox, Inc. It is a convenience wrapper around the product's own filter box.
+> **An Infoblox project.** Built by the Infoblox SE team as a convenience wrapper around Universal Asset Insights' own filter box. It is not part of the shipping product and carries no support SLA — but the queries in it are real, and most have been run against live tenants with the results checked by hand.
 
 ---
 
@@ -99,6 +99,10 @@ Read this before you use it:
 - Everything it creates is named with a `[Library]` prefix so it is obvious what came from here and easy to remove.
 - Queries with editable boxes are skipped, because saving one would freeze today's date into it and quietly go stale.
 - **Do not run it against a customer's production tenant** without asking them first.
+
+To remove them afterwards: **Saved Filters → See All**, then use the row menu (⋮) → **Delete** on each `[Library]` entry. Delete happens immediately, with no confirmation prompt.
+
+This flow has been run end to end against a live tenant — all 22 eligible queries created successfully.
 
 Everything else in this tool is read-only. This one button is the exception, which is why it asks for confirmation.
 

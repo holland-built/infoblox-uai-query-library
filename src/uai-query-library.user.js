@@ -3,7 +3,7 @@
 // @namespace    https://github.com/IngmarVG-IB/infoblox-uai-query-library
 // @version      __VERSION__
 // @description  Adds a curated, searchable query library to the Infoblox Universal Asset Insights Asset Inventory page.
-// @author       Ingmar van Glabbeek
+// @author       Infoblox SE Team
 // @license      MIT
 // @match        https://csp.infoblox.com/*
 // @grant        none
@@ -15,8 +15,8 @@
 // ==/UserScript==
 
 /*
- * Community project. Not an official Infoblox product, not endorsed by or
- * affiliated with Infoblox, Inc.
+ * An Infoblox project, built by the Infoblox SE team. Not part of the shipping
+ * product and carries no support SLA.
  *
  * Privacy: this script makes no network requests of its own while it runs. It
  * sends no telemetry, fetches no remote catalog, and reads no asset data. It
@@ -47,6 +47,20 @@
   const STORE_KEY = 'uaiql.local';
   const SAVED_FILTER_PREFIX = '[Library]';
   const INVENTORY_PATH = /\/workspace\/assets\/details\//;
+
+  /**
+   * Saved Filter names are capped at 50 characters. Measured, not guessed: a
+   * 50-character name saves and a 51-character one does not — and the UI gives
+   * no error when it refuses, it just silently does nothing. Hence both the
+   * truncation here and the read-back check in saveAsFilter.
+   */
+  const SAVED_FILTER_MAX_NAME = 50;
+
+  function savedFilterNameFor(entry) {
+    const base = entry.savedFilterName || entry.title;
+    const full = `${SAVED_FILTER_PREFIX} ${base}`;
+    return full.length <= SAVED_FILTER_MAX_NAME ? full : full.slice(0, SAVED_FILTER_MAX_NAME).trimEnd();
+  }
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -273,12 +287,44 @@
         + `?hideBreadcrumbs=true&isAdvanced=true&advancedFilterValue=${encoded}`;
     },
 
+    /** Names of the Saved Filters currently visible in the picker. */
+    async listSavedFilterNames() {
+      const link = this.button('Saved Filters');
+      if (!link) return null;
+      link.click();
+      await sleep(1600);
+      const seeAll = [...document.querySelectorAll('.cdk-overlay-container *')]
+        .find((e) => e.offsetParent && !e.children.length && /see all/i.test(e.textContent.trim()));
+      if (seeAll) { seeAll.click(); await sleep(2000); }
+
+      // The list virtualises, so scroll it through to see every row.
+      const pane = [...document.querySelectorAll('div')]
+        .filter((d) => d.offsetParent && d.scrollHeight > d.clientHeight + 50)
+        .pop();
+      const names = new Set();
+      const harvest = () => (document.body.innerText.match(/^.*\[Library\].*$/gm) || [])
+        .forEach((s) => names.add(s.trim()));
+      harvest();
+      for (let i = 0; pane && i < 30; i++) {
+        pane.scrollTop += pane.clientHeight * 0.8;
+        await sleep(220);
+        harvest();
+      }
+      [...document.querySelectorAll('.cdk-overlay-container button')]
+        .find((b) => b.offsetParent && b.textContent.trim() === 'Close')?.click();
+      await sleep(500);
+      return names;
+    },
+
     /**
      * Creates a native Saved Filter by driving the app's own Save popover.
      * Deliberately UI-driven rather than calling an undocumented API: it stays
      * inside whatever the signed-in user is actually allowed to do.
      */
     async saveAsFilter(queryText, name) {
+      if (name.length > SAVED_FILTER_MAX_NAME) {
+        throw new Error(`Name is ${name.length} characters; the limit is ${SAVED_FILTER_MAX_NAME}.`);
+      }
       await this.setQuery(queryText);
       const save = this.button('Save');
       if (!save || save.disabled) throw new Error('Save is unavailable for this query.');
@@ -549,23 +595,40 @@
     );
     if (!ok) return;
 
-    let done = 0;
+    let attempted = 0;
     const failures = [];
+    const wanted = new Map();
     for (const q of eligible) {
+      const name = savedFilterNameFor(q);
+      wanted.set(name, q.title);
       try {
-        await adapter.saveAsFilter(q.query, `${SAVED_FILTER_PREFIX} ${q.title}`);
-        done++;
-        toast(`Saved ${done}/${eligible.length}: ${q.title}`, 1500);
+        await adapter.saveAsFilter(q.query, name);
+        attempted++;
+        toast(`Saved ${attempted}/${eligible.length}: ${q.title}`, 1500);
       } catch (e) {
         failures.push(`${q.title}: ${e.message}`);
         await adapter.cancelOverlay();
       }
       await sleep(400);
     }
+
+    // The app accepts a save silently and then discards it in some cases, so
+    // read the list back rather than trusting that clicking Save worked.
+    const actual = await adapter.listSavedFilterNames();
+    if (actual) {
+      for (const [name, title] of wanted) {
+        const present = [...actual].some((n) => n.includes(name));
+        if (!present && !failures.some((f) => f.startsWith(title))) {
+          failures.push(`${title}: reported success but is not in the list`);
+        }
+      }
+    }
+
+    const created = wanted.size - failures.length;
     toast(
       failures.length
-        ? `Created ${done} of ${eligible.length}. ${failures.length} failed — see console.`
-        : `Created ${done} Saved Filters.`,
+        ? `Created ${created} of ${eligible.length}. ${failures.length} did not stick — see console.`
+        : `Created ${created} Saved Filters.`,
       7000,
     );
     if (failures.length) console.warn('[uaiql] Saved Filter failures:\n' + failures.join('\n'));

@@ -27,7 +27,11 @@
         },
         "title": {
           "type": "string",
-          "description": "Human-readable name, shown in the picker and used as the Saved Filter name."
+          "description": "Human-readable name, shown in the picker."
+        },
+        "savedFilterName": {
+          "type": "string",
+          "description": "Shorter name used when installing as a Saved Filter. Required when '[Library] ' plus the title would exceed 50 characters, which the product rejects silently."
         },
         "category": {
           "type": "string",

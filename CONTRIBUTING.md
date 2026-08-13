@@ -37,7 +37,8 @@ Queries live in [`queries/catalog.json`](queries/catalog.json). Add an object to
 | Field | Required | Notes |
 |---|---|---|
 | `id` | yes | Lower-case kebab-case, unique, never reused for a different query. |
-| `title` | yes | What appears in the panel, and the Saved Filter name. |
+| `title` | yes | What appears in the panel. |
+| `savedFilterName` | sometimes | A shorter name for the Saved Filter install. **Required** when `[Library] ` plus the title exceeds 50 characters — the product silently discards longer names, with no error. The build fails if you forget. |
 | `category` | yes | Reuse an existing one where it fits rather than inventing a near-duplicate. |
 | `query` | yes | The query text. Escape inner double quotes as `\"`. |
 | `description` | yes | What it finds and why it matters. Not a restatement of the query. |
@@ -77,7 +78,11 @@ Every `{{param:x}}` must be declared, and every declared parameter must be used.
 node build/build.mjs
 ```
 
-No dependencies, no install step — you just need Node. It validates the catalog (unique ids, balanced quotes and brackets, parameters declared and used, a recognised operator present) and fails with a specific message if something is off.
+No dependencies, no install step — you just need Node. It validates the catalog (unique ids, balanced quotes and brackets, parameters declared and used, a recognised operator present, Saved Filter names within the 50-character limit) and fails with a specific message if something is off.
+
+### Beware the asynchronous result count
+
+When you check a query by hand, the results table updates asynchronously. Read the count too early and you get the **previous** query's number — which looks like a perfectly plausible result. This has produced wrong conclusions twice while building this library. Wait for the count to settle, and treat any result that exactly equals the previous query's count as suspect until you have re-run it.
 
 ## What does not belong here
 

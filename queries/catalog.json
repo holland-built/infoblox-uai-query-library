@@ -24,6 +24,7 @@
     {
       "id": "managed-fleet-not-in-servicenow",
       "title": "Assets in EDR/MDM Fleet but Not in ServiceNow",
+      "savedFilterName": "EDR/MDM Fleet Not in ServiceNow",
       "category": "CMDB Reconciliation",
       "query": "Type IN [\"Laptop\", \"Workstation\"] AND Providers CONTAINS \"CrowdStrike Falcon\" AND (Providers CONTAINS \"Microsoft Intune\" OR Providers CONTAINS \"Jamf Pro\") AND Providers NOTIN [\"ServiceNow\"]",
       "description": "Laptops and workstations that are already confirmed managed devices — covered by CrowdStrike for security and by Intune or Jamf for device management — yet have no ServiceNow record at all. Unlike a generic 'missing from CMDB' check, this rules out the 'maybe it is just noise' objection: these are devices the security and MDM stack already trusts.",
@@ -47,6 +48,7 @@
     {
       "id": "retired-in-cmdb-still-on-network",
       "title": "Asset Marked as Retired in CMDB but Seen on the Network",
+      "savedFilterName": "Retired in CMDB, Seen on Network",
       "category": "CMDB Reconciliation",
       "query": "servicenow.servicenow_computers.install_status = \"retired\" AND asset.LastSeen AFTERDATE {{param:seenSince}}",
       "description": "Cross-references ServiceNow's CMDB lifecycle status against real-time network telemetry, flagging any device marked 'Retired' that is still active on the network. A retired device is off the patch schedule, off the vulnerability scan roster and has no assigned owner — but if it is still connected, it is a live, unmonitored attack surface sitting in the blind spot between the IT and security teams.",
@@ -128,6 +130,7 @@
     {
       "id": "laptops-disk-encryption-off",
       "title": "Corporate Managed Laptops with Disk Encryption Off",
+      "savedFilterName": "Laptops with Disk Encryption Off",
       "category": "Compliance",
       "query": "(intune.intune_managed_devices.device_health_attestation_state.bitLockerStatus = \"PROTECTION_OFF\") OR (jamf.jamf_computers_inventory.disk_encryption.bootPartitionEncryptionDetails.partitionFileVault2State != \"ENCRYPTED\")",
       "description": "Combines Jamf's FileVault state for Macs with Intune's BitLocker protection state for Windows into a single cross-provider query — one filter covering both platforms instead of two separate checks. Full-disk encryption is a regulatory baseline; MDM enrolment alone does not guarantee it is actually switched on, on either platform.",
@@ -152,6 +155,7 @@
     {
       "id": "crowdstrike-firewall-and-prevention-off",
       "title": "CrowdStrike Firewall Not Running and Prevention Policy Not Applied",
+      "savedFilterName": "CS Firewall + Prevention Off",
       "category": "Security Control Gaps",
       "query": "crowdstrike_falcon.crowdstrike_falcon_devices.device_policies.prevention.applied != \"true\" AND crowdstrike_falcon.crowdstrike_falcon_devices.device_policies.firewall.applied != \"true\"",
       "description": "Stacks two raw CrowdStrike policy attributes — firewall and prevention (real-time malware and threat blocking) — to isolate devices where both controls are inactive at once. A device missing both is an unprotected endpoint hiding inside the EDR tool itself: it can execute malware, allow lateral movement, and never trigger an alert.",
@@ -224,6 +228,7 @@
     {
       "id": "missing-any-core-record",
       "title": "Assets Missing Any Core DNS or IPAM Record",
+      "savedFilterName": "Missing Any Core DNS or IPAM Record",
       "category": "DDI Hygiene",
       "query": "asset.MissingRecords IN [\"DNS Forward Record\", \"DNS Pointer Record\", \"IPAM\"]",
       "description": "The union of the three record-gap checks: every asset missing at least one of forward DNS, reverse DNS or IPAM. The single number that sizes the whole DDI hygiene problem.",
@@ -466,6 +471,7 @@
     {
       "id": "os-past-security-support",
       "title": "Operating Systems Past End of Security Support",
+      "savedFilterName": "OS Past End of Security Support",
       "category": "Lifecycle & Patch Hygiene",
       "query": "asset.OSEndOfSecuritySupport BEFOREDATE {{param:asOf}}",
       "description": "Assets running an OS that no longer receives security fixes. A stricter and more urgent cut than end of life: these will never be patched again, whatever the vulnerability.",
@@ -494,6 +500,7 @@
     {
       "id": "os-approaching-end-of-life",
       "title": "Operating Systems Approaching End of Life",
+      "savedFilterName": "OS Approaching End of Life",
       "category": "Lifecycle & Patch Hygiene",
       "query": "asset.OSEndOfLife BEFOREDATE {{param:horizon}}",
       "description": "Assets whose OS reaches end of life inside the chosen planning horizon. The forward-looking counterpart to the past-EOL query — the same data, used to plan an upgrade instead of to report a failure.",

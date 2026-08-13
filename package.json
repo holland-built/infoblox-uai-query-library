@@ -4,7 +4,7 @@
   "description": "Userscript that adds a curated query library to the Infoblox Universal Asset Insights Asset Inventory.",
   "type": "module",
   "license": "MIT",
-  "author": "Ingmar van Glabbeek",
+  "author": "Infoblox SE Team",
   "repository": {
     "type": "git",
     "url": "https://github.com/IngmarVG-IB/infoblox-uai-query-library.git"
