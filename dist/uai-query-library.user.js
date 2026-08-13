@@ -10,17 +10,24 @@
 // @run-at       document-idle
 // @homepageURL  https://github.com/IngmarVG-IB/infoblox-uai-query-library
 // @supportURL   https://github.com/IngmarVG-IB/infoblox-uai-query-library/issues
+// @updateURL    https://github.com/IngmarVG-IB/infoblox-uai-query-library/raw/main/dist/uai-query-library.user.js
+// @downloadURL  https://github.com/IngmarVG-IB/infoblox-uai-query-library/raw/main/dist/uai-query-library.user.js
 // ==/UserScript==
 
 /*
  * Community project. Not an official Infoblox product, not endorsed by or
  * affiliated with Infoblox, Inc.
  *
- * Privacy: this script makes no network requests of its own. It sends no
- * telemetry, fetches no remote catalog, and reads no asset data. It puts text
- * into the page's own filter box and clicks the page's own buttons. The whole
- * catalog is baked into this file at build time, so you can read exactly what
- * it will run before you install it.
+ * Privacy: this script makes no network requests of its own while it runs. It
+ * sends no telemetry, fetches no remote catalog, and reads no asset data. It
+ * puts text into the page's own filter box and clicks the page's own buttons.
+ * The whole catalog is baked into this file at build time, so you can read
+ * exactly what it will run before you install it.
+ *
+ * The one exception is outside the script: @updateURL asks your userscript
+ * manager to check GitHub periodically for a new version. That is the
+ * extension talking to github.com, not this code, and you can turn it off in
+ * the extension's settings.
  *
  * @grant none is deliberate: it runs the script in the page's own context,
  * which is what makes window.monaco reachable. Storage therefore uses
@@ -52,7 +59,7 @@
         "ServiceNow"
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "managed-fleet-not-in-servicenow",
@@ -75,7 +82,7 @@
         "CrowdStrike Falcon"
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "retired-in-cmdb-still-on-network",
@@ -106,7 +113,7 @@
       ],
       "proof": "Open one matching asset, expand its ServiceNow raw attributes, and point at install_status plus last_discovered — the two fields that produced the match.",
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "byod-devices",
@@ -123,7 +130,7 @@
       ],
       "requiresProviders": [],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "windows-macos-eol",
@@ -156,7 +163,7 @@
         }
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "laptops-disk-encryption-off",
@@ -180,7 +187,7 @@
       ],
       "proof": "Open a Jamf-discovered asset and find partitionFileVault2State: NOT_ENCRYPTED in its raw attributes; open an Intune-discovered asset and find bitLockerStatus: PROTECTION_OFF.",
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "crowdstrike-firewall-and-prevention-off",
@@ -200,7 +207,7 @@
         "CrowdStrike Falcon"
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "missing-dns-forward-record",
@@ -287,7 +294,7 @@
       ],
       "requiresProviders": [],
       "source": "derived",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "unencrypted-assets",
@@ -304,7 +311,7 @@
       ],
       "requiresProviders": [],
       "source": "derived",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "orphaned-assets",

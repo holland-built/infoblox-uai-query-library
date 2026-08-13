@@ -19,7 +19,7 @@
         "ServiceNow"
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "managed-fleet-not-in-servicenow",
@@ -42,7 +42,7 @@
         "CrowdStrike Falcon"
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "retired-in-cmdb-still-on-network",
@@ -73,7 +73,7 @@
       ],
       "proof": "Open one matching asset, expand its ServiceNow raw attributes, and point at install_status plus last_discovered — the two fields that produced the match.",
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "byod-devices",
@@ -90,7 +90,7 @@
       ],
       "requiresProviders": [],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "windows-macos-eol",
@@ -123,7 +123,7 @@
         }
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "laptops-disk-encryption-off",
@@ -147,7 +147,7 @@
       ],
       "proof": "Open a Jamf-discovered asset and find partitionFileVault2State: NOT_ENCRYPTED in its raw attributes; open an Intune-discovered asset and find bitLockerStatus: PROTECTION_OFF.",
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "crowdstrike-firewall-and-prevention-off",
@@ -167,7 +167,7 @@
         "CrowdStrike Falcon"
       ],
       "source": "workbook",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "missing-dns-forward-record",
@@ -254,7 +254,7 @@
       ],
       "requiresProviders": [],
       "source": "derived",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "unencrypted-assets",
@@ -271,7 +271,7 @@
       ],
       "requiresProviders": [],
       "source": "derived",
-      "verified": "syntax-only"
+      "verified": "counted"
     },
     {
       "id": "orphaned-assets",

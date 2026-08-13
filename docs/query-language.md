@@ -21,6 +21,33 @@ Field names may be written bare (`Type`) or namespaced (`asset.Type`). Both are 
 
 Operator keywords are conventionally uppercase. String values are double-quoted; list values go in `[ ... ]`.
 
+## What differs between tenants, and what does not
+
+Two tenants inspected on the same day presented noticeably different **autocomplete**, which is easy to mistake for a different query language. Tested against live data, it is not:
+
+| | Tenant A | Tenant B |
+|---|---|---|
+| Root autocomplete | only `asset` | bare field names plus provider namespaces |
+| `asset.` autocomplete | full field list | nothing |
+| `Classifications` shown as | `Zombie`, `Noncompliant` | `zombie`, `oseol`, `oseos`, `oseossec`, `compliance`, `registration` |
+| `MissingRecords` shown as | `DNS Forward Record`, `DNS Pointer Record`, `IPAM` | `missingdnsforwardrecord`, `missingdnsreverserecord` |
+| Providers integrated | AWS, Azure, GCP, DHCP Logs, Infoblox Endpoint, NIOS | + ServiceNow, CrowdStrike, Intune, Jamf, Tenable, Meraki, Mist, Ordr, Aruba |
+| Extra fields | — | `Category` (`Compute`, `Device`, `IoT`, `Network`, `Service`) |
+
+**Queries are portable anyway.** Both differences are cosmetic, confirmed by comparing result counts on tenant B:
+
+```
+Type IN ["Laptop"]                              → 158     asset.Type IN ["Laptop"]                        → 158
+Classifications IN ["zombie"]                   →  23     Classifications IN ["Zombie"]                   →  23
+MissingRecords IN ["missingdnsforwardrecord"]   →  34     MissingRecords IN ["DNS Forward Record"]        →  34
+```
+
+So the `asset.` prefix is optional, and values are accepted in either the label or the code spelling, regardless of which one autocomplete happens to show you. This library uses the `asset.` prefix and label spellings throughout.
+
+What genuinely does not carry across is **which providers and fields exist at all**. A `servicenow.*` query is meaningless where ServiceNow is not integrated, and `MissingRecords IN ["IPAM"]` only means something where IPAM data is present. That is what the `requiresProviders` field in the catalog is for.
+
+> A caution learned the hard way while writing this page: the results table updates asynchronously, and reading the count too early gives you the *previous* query's number. Two of the figures above were wrong on first measurement for exactly that reason. When checking a query by hand, wait for the count to settle, and be suspicious of any result that exactly equals the previous one.
+
 ## Namespaces
 
 | Namespace | Contents |

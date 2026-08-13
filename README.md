@@ -151,6 +151,17 @@ If you cannot install a browser extension, you can still use the queries — the
 - It makes **no network requests of its own** — no telemetry, no phoning home, no fetching anything at runtime. The queries are baked into the file you installed.
 - It **reads no asset data**. It types into the filter box and clicks buttons, exactly as you would.
 - Apart from the clearly-marked *Install as Saved Filters* button, it changes nothing in your tenant.
+- **Auto-update:** your userscript extension periodically checks GitHub for a new version, so you get new queries without reinstalling. That is the extension talking to github.com, not this script, and you can switch it off in the extension's settings.
+
+---
+
+## Will these work in my tenant?
+
+The queries themselves are portable — tested across two different tenants, the syntax and values behave identically even though the autocomplete presents them differently.
+
+What varies is **what your tenant actually has connected**. A query about ServiceNow records cannot tell you anything if ServiceNow is not integrated. That is what the greyed-out `needs …` tags are for: the panel checks your tenant and tells you up front rather than returning an empty table.
+
+18 of the 28 queries have been run against live tenants with the counts hand-checked. The other 10 are valid and run cleanly, but the tenants tested did not hold the data to prove the result is meaningful — they are tagged accordingly, so you always know which is which.
 
 ---
 
