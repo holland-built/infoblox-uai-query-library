@@ -88,7 +88,7 @@ When you check a query by hand, the results table updates asynchronously. Read t
 
 - **Anything tenant-specific.** Discovery job names, asset names, IP addresses, account IDs, internal hostnames, customer names. This repository is public. Queries should be portable; if a query only works in one tenant, it belongs in your own notes.
 - **Internal-only material.** Do not paste in content from internal enablement decks, playbooks or portals. Descriptions here should stand on their own as technical writing.
-- **Screenshots of real data.**
+- **Screenshots containing real customer data.** Screenshots of a demo tenant are fine — that is what the images in the README are. Anything showing a real customer's estate is not, even partially, and even if it looks anonymous.
 
 ## Changing the script itself
 

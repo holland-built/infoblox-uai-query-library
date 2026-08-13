@@ -16,6 +16,10 @@ Questions like:
 
 28 of them, each with a plain-English explanation of what it finds and why it matters.
 
+![The Query Library panel open beside the Asset Inventory table, showing a query applied and 108 matching assets](docs/img/query-library.png)
+
+*The library open next to Asset Inventory. The query in the filter bar came from the panel on the right — one click.*
+
 > **An Infoblox project.** Built by the Infoblox SE team as a convenience wrapper around Universal Asset Insights' own filter box. It is not part of the shipping product and carries no support SLA — but the queries in it are real, and most have been run against live tenants with the results checked by hand.
 
 ---
@@ -65,6 +69,10 @@ That is the whole workflow.
 ---
 
 ## What you will see in the panel
+
+<img src="docs/img/query-library-panel.png" alt="A single expanded query card showing its title, verified tag, description, usage note, an editable day-count parameter, the generated query text, and the Apply and run, Load only, Copy query and Copy link buttons" width="440">
+
+Click a query's title and it opens up like this — everything about it in one place.
 
 **A `verified` tag** — this query has been run against a live tenant and the result was hand-checked. Queries without it are syntactically valid but have not been confirmed to return meaningful results everywhere.
 
