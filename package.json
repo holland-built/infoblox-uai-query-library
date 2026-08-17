@@ -1,6 +1,6 @@
 {
   "name": "infoblox-uai-query-library",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Userscript that adds a curated query library to the Infoblox Universal Asset Insights Asset Inventory.",
   "type": "module",
   "license": "MIT",

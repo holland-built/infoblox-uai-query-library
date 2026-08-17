@@ -156,6 +156,27 @@ The Save control next to the filter bar stores the current query as a named Save
 
 This is worth knowing beyond this project, because the obvious way to script bulk creation — click Save, type a name, click Save, assume it worked — will report complete success while quietly dropping every entry with a long name. Four of twenty-two went missing that way before the cause was found. Always read the list back.
 
+## Asset Inventory has more than one route
+
+The left nav reaches the same Asset Inventory page by two different routes, and they are not variants of one path:
+
+| Menu path | Route |
+|---|---|
+| **Assets → Inventory** | `#/workspace/assets/unified-details/managed-assets` |
+| **Network → Assets in Network** | `#/workspace/assets`, which redirects to `#/workspace/assets/details/managed-assets` |
+
+Both render the same filter bar and the same `filterel` Monaco editor, so anything scripted against one works on the other. The default row scoping differs, though — the same tenant reported 1721 assets on `unified-details` and 2318 on `details` — so do not compare counts taken from different routes.
+
+Anything matching on the route should match the `#/workspace/assets` prefix rather than a single leaf. Matching `/workspace/assets/details/` alone silently misses the menu item most people actually use.
+
+## The portal routes with pushState, not hash assignment
+
+Worth knowing before scripting anything that has to react to navigation: **`hashchange` does not fire when this app changes route.** Measured on a live route change from `.../details/...` to `.../unified-details/...`, the hash changed and `hashchange` fired zero times, because `history.pushState` never emits it — even when the hash it writes differs.
+
+A `MutationObserver` on `document.body` is not a workaround either; with `childList` alone it only sees direct children, and route swaps happen deep in the tree.
+
+What does work is wrapping `history.pushState` and `history.replaceState`, listening for `popstate`, and polling `location.href` as a backstop. Route changes also do **not** reload the page, so a userscript runs once and must handle every later navigation itself.
+
 ## Filter state in the URL
 
 Asset Inventory keeps filter state in the URL hash:

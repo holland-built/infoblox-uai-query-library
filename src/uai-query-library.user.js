@@ -46,7 +46,18 @@
   const NS = 'uaiql';
   const STORE_KEY = 'uaiql.local';
   const SAVED_FILTER_PREFIX = '[Library]';
-  const INVENTORY_PATH = /\/workspace\/assets\/details\//;
+
+  /**
+   * Asset Inventory is reachable on more than one route, and they are not
+   * variations on one path — the left nav points at two different ones:
+   *
+   *   Assets > Inventory          #/workspace/assets/unified-details/managed-assets
+   *   Network > Assets in Network #/workspace/assets  (redirects to .../details/...)
+   *
+   * Both render the same filter bar. Matching the workspace prefix rather than
+   * any single leaf covers both, and survives the next one being added.
+   */
+  const INVENTORY_PATH = /\/workspace\/assets(\/|\?|$)/;
 
   /**
    * Saved Filter names are capped at 50 characters. Measured, not guessed: a
@@ -671,11 +682,44 @@
     });
   }
 
-  // Single-page app: the button has to survive client-side navigation.
-  W.addEventListener('hashchange', () => setTimeout(mount, 400));
-  const observer = new MutationObserver(() => mount());
+  /**
+   * Notices client-side navigation in a single-page app.
+   *
+   * Listening for `hashchange` is not enough and was the original bug here.
+   * The portal routes with history.pushState, and pushState never fires
+   * hashchange even when the hash it writes is different — measured on a live
+   * route change: the hash went from .../details/... to .../unified-details/...
+   * and hashchange fired zero times. A MutationObserver on document.body only
+   * sees direct children, so route swaps deep in the app do not reach it either.
+   *
+   * So: wrap the history methods, keep the native events for completeness, and
+   * poll as a backstop for anything that changes the URL by another path. The
+   * poll is a string comparison, which is cheaper than the observer it replaces.
+   */
+  function watchNavigation(onChange) {
+    let last = location.href;
+    const check = () => {
+      if (location.href === last) return;
+      last = location.href;
+      onChange();
+    };
+
+    for (const method of ['pushState', 'replaceState']) {
+      const original = history[method];
+      history[method] = function (...args) {
+        const result = original.apply(this, args);
+        check();
+        return result;
+      };
+    }
+
+    W.addEventListener('popstate', check);
+    W.addEventListener('hashchange', check);
+    setInterval(check, 750);
+  }
+
   if (document.body) {
     mount();
-    observer.observe(document.body, { childList: true });
+    watchNavigation(mount);
   }
 })();
