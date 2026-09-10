@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UAI Query Library
 // @namespace    https://github.com/IngmarVG-IB/infoblox-uai-query-library
-// @version      0.1.1
+// @version      0.1.2
 // @description  Adds a curated, searchable query library to the Infoblox Universal Asset Insights Asset Inventory page.
 // @author       Infoblox SE Team
 // @license      MIT
@@ -630,12 +630,20 @@
    * variations on one path — the left nav points at two different ones:
    *
    *   Assets > Inventory          #/workspace/assets/unified-details/managed-assets
-   *   Network > Assets in Network #/workspace/assets  (redirects to .../details/...)
+   *   Network > Assets in Network #/workspace/assets  (an Assets *dashboard*)
    *
-   * Both render the same filter bar. Matching the workspace prefix rather than
-   * any single leaf covers both, and survives the next one being added.
+   * Both inventory routes render the same filter bar, so anything below a
+   * sub-path is fair game. Bare `#/workspace/assets` is not: it is the Network
+   * Assets dashboard — charts, no filter bar, no Monaco editor, ever. An
+   * earlier version matched the whole `/workspace/assets` prefix to fix the
+   * button not appearing under Assets > Inventory, and in doing so put the
+   * button on that dashboard, where every query failed with "switch to
+   * Advanced Mode first". Requiring a segment after `assets/` excludes it.
+   *
+   * The route is a cheap first filter, not the decision — mount() confirms the
+   * filter bar is really there before adding anything to the page.
    */
-  const INVENTORY_PATH = /\/workspace\/assets(\/|\?|$)/;
+  const INVENTORY_PATH = /\/workspace\/assets\/[^/?#]+\//;
 
   /**
    * Saved Filter names are capped at 50 characters. Measured, not guessed: a
@@ -804,19 +812,40 @@
       );
     },
 
+    /**
+     * The filter bar, in either mode. In Basic Mode window.monaco is already
+     * loaded but getModels() is empty, so the toggle is the only tell.
+     */
+    filterBar() {
+      return this.model() || this.button('Advanced Mode') || this.button('Basic Mode') || null;
+    },
+
     /** Advanced Mode hosts the Monaco editor; Basic Mode does not. */
     async ensureAdvancedMode() {
       if (this.model()) return true;
-      const toggle = this.button('Advanced Mode');
+      // The toggle can lag the rest of the bar, and the bar re-renders on mode
+      // changes. Give it a moment rather than failing on the first look.
+      let toggle = this.button('Advanced Mode');
+      for (let i = 0; i < 12 && !toggle && !this.model(); i++) {
+        await sleep(250);
+        toggle = this.button('Advanced Mode');
+      }
+      if (this.model()) return true;
       if (!toggle) return false;
       toggle.click();
-      for (let i = 0; i < 20 && !this.model(); i++) await sleep(150);
+      // Measured at 270ms on a live tenant; budget well over that for a
+      // loaded tenant on a slow connection.
+      for (let i = 0; i < 40 && !this.model(); i++) await sleep(150);
       return !!this.model();
     },
 
     async setQuery(text) {
       if (!(await this.ensureAdvancedMode())) {
-        throw new Error('Open Asset Inventory and switch to Advanced Mode first.');
+        throw new Error(
+          this.button('Advanced Mode')
+            ? 'The filter bar did not switch to Advanced Mode — try again in a moment.'
+            : 'No filter bar on this page. Open Assets > Inventory.',
+        );
       }
       this.model().setValue(text);
       await sleep(250);
@@ -1237,6 +1266,12 @@
     }
     if (document.querySelector(`.${NS}-fab`)) return;
 
+    // The route matching is not proof there is anything to drive. Wait for the
+    // filter bar itself, which lands a few hundred ms after the route change.
+    // Cheap to re-check: this only runs between arriving on an inventory route
+    // and the bar rendering, because the guard above returns once mounted.
+    if (!adapter.filterBar()) return;
+
     const style = document.createElement('style');
     style.id = `${NS}-style`;
     style.textContent = CSS;
@@ -1293,7 +1328,11 @@
 
     W.addEventListener('popstate', check);
     W.addEventListener('hashchange', check);
-    setInterval(check, 750);
+
+    // Tick unconditionally rather than only on a URL change: the filter bar
+    // renders after the route settles, so the mount that matters is usually a
+    // later one. onChange is a regex test and one querySelector once mounted.
+    setInterval(() => { check(); onChange(); }, 750);
   }
 
   if (document.body) {

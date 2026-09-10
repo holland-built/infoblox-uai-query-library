@@ -146,6 +146,10 @@ Hypervisor Host        Server                        Set-Top-Box         VPN Gat
 
 **Advanced queries are one-way.** Once a query uses advanced syntax, the UI cannot convert it back to Basic Mode. It says so in a tooltip on the Basic Mode link.
 
+**In Basic Mode, `window.monaco` exists but owns nothing.** The library is already loaded and `window.monaco` is a live object, while `monaco.editor.getModels()` returns `[]` and `getEditors()` returns `0`. The editor is only instantiated when you switch to Advanced Mode — measured at 270 ms after the toggle click. So the presence of `window.monaco` tells you nothing about which mode you are in; the model list, or the mode toggle's label, is the only reliable signal.
+
+The toggle is a plain button in the filter bar's footer row (`Ask IQ · Saved Filters · Advanced Mode · Clear · Save · Apply`), labelled with the mode it switches *to* — so `Advanced Mode` means you are currently in Basic.
+
 **There is no client-side validation.** The editor registers no diagnostics: malformed queries produce no error markers and do not disable Apply. Mistakes surface only when the query reaches the server. Verify a query by running it and sanity-checking the count, not by trusting that it parsed.
 
 ## Saved Filters
@@ -160,14 +164,19 @@ This is worth knowing beyond this project, because the obvious way to script bul
 
 The left nav reaches the same Asset Inventory page by two different routes, and they are not variants of one path:
 
-| Menu path | Route |
-|---|---|
-| **Assets → Inventory** | `#/workspace/assets/unified-details/managed-assets` |
-| **Network → Assets in Network** | `#/workspace/assets`, which redirects to `#/workspace/assets/details/managed-assets` |
+| Menu path | Route | Filter bar? |
+|---|---|---|
+| **Assets → Inventory** | `#/workspace/assets/unified-details/managed-assets` | yes |
+| **Network → Assets** | `#/workspace/assets?time_range=…&trend=…` | **no** |
+| (clicking through from that dashboard) | `#/workspace/assets/details/managed-assets` | yes |
 
-Both render the same filter bar and the same `filterel` Monaco editor, so anything scripted against one works on the other. The default row scoping differs, though — the same tenant reported 1721 assets on `unified-details` and 2318 on `details` — so do not compare counts taken from different routes.
+Both `*-details/managed-assets` routes render the same filter bar and the same `filterel` Monaco editor, so anything scripted against one works on the other. The default row scoping differs, though — the same tenant reported 1721 assets on `unified-details` and 2318 on `details` — so do not compare counts taken from different routes.
 
-Anything matching on the route should match the `#/workspace/assets` prefix rather than a single leaf. Matching `/workspace/assets/details/` alone silently misses the menu item most people actually use.
+**Bare `#/workspace/assets` is not the inventory at all.** It is the Network Assets dashboard: charts and tiles, no filter bar, no Monaco editor — measured, it never appears, not at 12 seconds. You reach the inventory from there by clicking through a tile, which is why the inventory *seems* to live under that menu item.
+
+So a route matcher needs to be narrow at both ends. `/workspace/assets/details/` alone misses the menu item most people use; the whole `/workspace/assets` prefix picks up the dashboard, where anything driving the filter bar has nothing to drive. Requiring a segment after `assets/` — `/\/workspace\/assets\/[^/?#]+\//` — covers both real routes and excludes the dashboard.
+
+Better still, treat the route as a cheap pre-filter and confirm the filter bar is actually in the DOM before acting. It lands a few hundred milliseconds after the route settles, so that check has to be retried rather than made once.
 
 ## The portal routes with pushState, not hash assignment
 
