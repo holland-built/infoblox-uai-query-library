@@ -42,7 +42,19 @@ You will see a small icon appear in your browser toolbar. That is it — you nev
 
 > **On a managed work laptop?** Extension installs may be blocked by policy. If the install button does nothing, ask IT to allow Tampermonkey, or see [No extension allowed?](#no-extension-allowed) below.
 
-### Step 2 — Install the Query Library
+### Step 2 — Chrome and Edge only: switch on "Allow user scripts"
+
+**Skip this on Firefox and Safari.** On Chrome and Edge it is not optional, and it is the single most common reason people think the library is broken: without it, userscripts simply never run. No error, no warning on the page — the Query Library button just never appears.
+
+1. Go to **`chrome://extensions`** (on Edge, **`edge://extensions`**). Type it into the address bar; it is not in the menu.
+2. Find **Tampermonkey** and click **Details**.
+3. Scroll down and turn on **Allow user scripts**.
+
+That is a per-extension permission, so you only do it for Tampermonkey, and only once.
+
+> **Older versions of Chrome** don't have that toggle. Instead, turn on **Developer mode** with the switch in the top-right corner of `chrome://extensions`. If you see the "Allow user scripts" toggle, use that and leave Developer mode alone.
+
+### Step 3 — Install the Query Library
 
 **[⬇️ Click here to install](https://github.com/IngmarVG-IB/infoblox-uai-query-library/raw/main/dist/uai-query-library.user.js)**
 
@@ -50,13 +62,18 @@ Your userscript extension will recognise the file and open an installation page 
 
 That page is worth a look: it is the entire script, and you can read exactly what it does before installing it. It makes no network calls of its own and sends no data anywhere.
 
-### Step 3 — Open Asset Inventory
+### Step 4 — Open Asset Inventory
 
 Go to your Infoblox portal, then **Assets → Inventory**.
 
 A green **Query Library** button appears in the bottom-right corner. Click it.
 
-### Step 4 — Run your first query
+> **No button?** Two things to check, in this order.
+>
+> 1. **On Chrome or Edge, go back and do Step 2.** A skipped "Allow user scripts" toggle looks exactly like this — nothing happens at all.
+> 2. **Make sure you are on the inventory, not the dashboard.** `Network → Assets` opens an Assets *dashboard* — charts and tiles, no filter bar. The button deliberately stays away from that page, because there is nothing there for it to type into. Use **Assets → Inventory**, or click through a dashboard tile to reach the asset table.
+
+### Step 5 — Run your first query
 
 The panel opens on the right with the queries grouped by theme.
 
