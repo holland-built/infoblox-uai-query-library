@@ -127,7 +127,7 @@ Read this before you use it:
 
 To remove them afterwards: **Saved Filters → See All**, then use the row menu (⋮) → **Delete** on each filter this tool created (the names match the `savedFilterName` or title in `queries/catalog.json`, or carry your prefix if you set one). Delete happens immediately, with no confirmation prompt.
 
-This flow has been run end to end against a live tenant — all 22 eligible queries created successfully.
+This flow was run end to end against a live tenant when every filter still carried the `[Library]` prefix — all 22 eligible queries created successfully. The no-prefix default and the shorter names have not yet been run against a live tenant.
 
 Everything else in this tool is read-only. This one button is the exception, which is why it asks for confirmation.
 
