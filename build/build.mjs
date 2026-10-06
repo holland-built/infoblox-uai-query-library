@@ -17,6 +17,8 @@ const SRC = join(root, 'src', 'uai-query-library.user.js');
 const CATALOG = join(root, 'queries', 'catalog.json');
 const OUT = join(root, 'dist', 'uai-query-library.user.js');
 
+// Validate against the longest case: a user can opt in to a "[Library]" prefix
+// at runtime (localStorage 'uaiql.prefix'), which must still fit.
 const SAVED_FILTER_PREFIX = '[Library]';
 const SAVED_FILTER_MAX_NAME = 50;
 

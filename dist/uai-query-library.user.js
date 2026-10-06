@@ -45,6 +45,7 @@
     {
       "id": "missing-from-servicenow",
       "title": "Assets Missing from ServiceNow",
+      "savedFilterName": "Missing from ServiceNow",
       "category": "CMDB Reconciliation",
       "query": "Providers NOTIN [\"ServiceNow\"]",
       "description": "Any asset type with no ServiceNow record at all, regardless of ownership or device class. Not devices that are wrong in the CMDB — devices that are entirely absent from it. The broadest CMDB-completeness check there is.",
@@ -64,7 +65,7 @@
     {
       "id": "managed-fleet-not-in-servicenow",
       "title": "Assets in EDR/MDM Fleet but Not in ServiceNow",
-      "savedFilterName": "EDR/MDM Fleet Not in ServiceNow",
+      "savedFilterName": "EDR/MDM Not in ServiceNow",
       "category": "CMDB Reconciliation",
       "query": "Type IN [\"Laptop\", \"Workstation\"] AND Providers CONTAINS \"CrowdStrike Falcon\" AND (Providers CONTAINS \"Microsoft Intune\" OR Providers CONTAINS \"Jamf Pro\") AND Providers NOTIN [\"ServiceNow\"]",
       "description": "Laptops and workstations that are already confirmed managed devices — covered by CrowdStrike for security and by Intune or Jamf for device management — yet have no ServiceNow record at all. Unlike a generic 'missing from CMDB' check, this rules out the 'maybe it is just noise' objection: these are devices the security and MDM stack already trusts.",
@@ -120,6 +121,7 @@
     {
       "id": "byod-devices",
       "title": "BYOD / Unenrolled Personal Devices",
+      "savedFilterName": "BYOD / Unenrolled Devices",
       "category": "Shadow IT",
       "query": "Type IN [\"Laptop\", \"Workstation\", \"Smartphone\", \"Tablet\"] AND Providers NOTIN [\"CrowdStrike Falcon\", \"ServiceNow\", \"Tenable\", \"Jamf Pro\", \"Microsoft Intune\"]",
       "description": "Laptops, workstations, smartphones and tablets — the device types people actually bring to work — that show zero presence across five core providers at once. A device this invisible was never enrolled anywhere, which is the clearest available signal of a personal device connecting to corporate resources.",
@@ -170,7 +172,7 @@
     {
       "id": "laptops-disk-encryption-off",
       "title": "Corporate Managed Laptops with Disk Encryption Off",
-      "savedFilterName": "Laptops with Disk Encryption Off",
+      "savedFilterName": "Laptops: Disk Encryption Off",
       "category": "Compliance",
       "query": "(intune.intune_managed_devices.device_health_attestation_state.bitLockerStatus = \"PROTECTION_OFF\") OR (jamf.jamf_computers_inventory.disk_encryption.bootPartitionEncryptionDetails.partitionFileVault2State != \"ENCRYPTED\")",
       "description": "Combines Jamf's FileVault state for Macs with Intune's BitLocker protection state for Windows into a single cross-provider query — one filter covering both platforms instead of two separate checks. Full-disk encryption is a regulatory baseline; MDM enrolment alone does not guarantee it is actually switched on, on either platform.",
@@ -216,6 +218,7 @@
     {
       "id": "missing-dns-forward-record",
       "title": "Assets with No Forward DNS Record",
+      "savedFilterName": "No Forward DNS",
       "category": "DDI Hygiene",
       "query": "asset.MissingRecords IN [\"DNS Forward Record\"]",
       "description": "Assets that are live on the network but have no A/AAAA record. Anything here is reachable by address but not by name, which breaks certificate issuance, log correlation and every runbook that assumes a hostname resolves.",
@@ -233,6 +236,7 @@
     {
       "id": "missing-dns-ptr-record",
       "title": "Assets with No Reverse DNS Record",
+      "savedFilterName": "No Reverse DNS",
       "category": "DDI Hygiene",
       "query": "asset.MissingRecords IN [\"DNS Pointer Record\"]",
       "description": "Assets with no PTR record. Reverse lookups underpin mail acceptance, SIEM enrichment and most network forensics — an address that will not resolve backwards turns every investigation into manual work.",
@@ -251,6 +255,7 @@
     {
       "id": "missing-ipam-record",
       "title": "Assets with No IPAM Record",
+      "savedFilterName": "No IPAM Record",
       "category": "DDI Hygiene",
       "query": "asset.MissingRecords IN [\"IPAM\"]",
       "description": "Assets holding an address that IPAM does not know about. These are the addresses that cause duplicate-allocation incidents, because the system of record believes they are free.",
@@ -268,7 +273,7 @@
     {
       "id": "missing-any-core-record",
       "title": "Assets Missing Any Core DNS or IPAM Record",
-      "savedFilterName": "Missing Any Core DNS or IPAM Record",
+      "savedFilterName": "Missing DNS or IPAM",
       "category": "DDI Hygiene",
       "query": "asset.MissingRecords IN [\"DNS Forward Record\", \"DNS Pointer Record\", \"IPAM\"]",
       "description": "The union of the three record-gap checks: every asset missing at least one of forward DNS, reverse DNS or IPAM. The single number that sizes the whole DDI hygiene problem.",
@@ -287,6 +292,7 @@
     {
       "id": "zombie-assets",
       "title": "Zombie Assets",
+      "savedFilterName": "Zombie Assets",
       "category": "Insight Classifications",
       "query": "asset.Classifications IN [\"Zombie\"]",
       "description": "Assets that UAI has itself classified as zombies — present and consuming address space or resources, but showing none of the signals of something genuinely in service. The product's own answer to the 'retired but still connected' problem, without needing a CMDB integration to find it.",
@@ -304,6 +310,7 @@
     {
       "id": "unencrypted-assets",
       "title": "Assets Flagged as Unencrypted",
+      "savedFilterName": "Unencrypted Assets",
       "category": "Insight Classifications",
       "query": "asset.SubClassifications IN [\"Unencrypted\"]",
       "description": "Assets UAI has classified as unencrypted, using whichever provider signal is available for that asset. Reaches the same conclusion as the BitLocker and FileVault query without hardcoding either provider's field path, so it keeps working as the provider mix changes.",
@@ -321,6 +328,7 @@
     {
       "id": "orphaned-assets",
       "title": "Orphaned Assets",
+      "savedFilterName": "Orphaned Assets",
       "category": "Insight Classifications",
       "query": "asset.SubClassifications IN [\"Orphan\"]",
       "description": "Assets with no owning parent resource — typically cloud objects left behind when the thing that created them was deleted. They keep costing money and keep holding addresses.",
@@ -339,6 +347,7 @@
     {
       "id": "publicly-accessible-assets",
       "title": "Publicly Accessible Assets",
+      "savedFilterName": "Publicly Accessible",
       "category": "Insight Classifications",
       "query": "asset.SubClassifications IN [\"Public Access\"]",
       "description": "Assets UAI has determined are reachable from the public internet. The exposure list, derived from reconciled cloud and network data rather than from an external scan.",
@@ -357,6 +366,7 @@
     {
       "id": "idle-cloud-resources",
       "title": "Idle and Underused Cloud Resources",
+      "savedFilterName": "Idle / Underused Cloud",
       "category": "Insight Classifications",
       "query": "asset.SubClassifications IN [\"Resource Utilization Idle\", \"Resource Utilization Low\"]",
       "description": "Cloud resources running at idle or consistently low utilisation. Every one is a live bill with no corresponding workload.",
@@ -375,6 +385,7 @@
     {
       "id": "noncompliant-assets",
       "title": "Assets Classified as Noncompliant",
+      "savedFilterName": "Noncompliant Assets",
       "category": "Insight Classifications",
       "query": "asset.Classifications IN [\"Noncompliant\"]",
       "description": "Assets failing UAI's own compliance classification. A useful starting point before narrowing to a specific control with the sub-classification queries.",
@@ -418,6 +429,7 @@
     {
       "id": "unclassified-assets",
       "title": "Unclassified Assets",
+      "savedFilterName": "Unclassified Assets",
       "category": "Discovery Hygiene",
       "query": "asset.Type IN [\"Unclassified\"]",
       "description": "Assets present on the network that UAI could not assign a device type to. Each one is something connected that nobody can describe — the raw material of every shadow-IT and unmanaged-device conversation.",
@@ -435,6 +447,7 @@
     {
       "id": "low-confidence-identification",
       "title": "Assets Identified with Low Confidence",
+      "savedFilterName": "Low-Confidence ID",
       "category": "Discovery Hygiene",
       "query": "asset.Confidence IN [\"Low\", \"EMPTY\"]",
       "description": "Assets whose identification UAI is not confident about. Distinct from unclassified: these have a guessed type that may well be wrong, so they are the records most likely to mislead an inventory report.",
@@ -451,6 +464,7 @@
     {
       "id": "no-serial-number",
       "title": "Assets with No Serial Number",
+      "savedFilterName": "No Serial Number",
       "category": "Discovery Hygiene",
       "query": "asset.SerialNumber IS \"EMPTY\"",
       "description": "Assets with no serial number recorded. Serial number is the join key most asset-management, warranty and procurement processes depend on; without it, an asset cannot be tied back to a purchase or a support contract.",
@@ -468,6 +482,7 @@
     {
       "id": "assets-in-error-state",
       "title": "Assets Reporting an Error State",
+      "savedFilterName": "Error State",
       "category": "Discovery Hygiene",
       "query": "asset.OverallStatus IN [\"ERROR\"]",
       "description": "Assets whose overall status is an error. Worth clearing before quoting any other number from the inventory, since these records are the least likely to be accurate.",
@@ -568,6 +583,7 @@
     {
       "id": "iot-and-ot-devices",
       "title": "IoT and OT Devices on the Network",
+      "savedFilterName": "IoT / OT Devices",
       "category": "Estate Composition",
       "query": "asset.Type IN [\"Generic IoT\", \"Surveillance Camera\", \"Smart TV\", \"Smart Speaker\", \"Smart Plug\", \"Smart Door Bell\", \"Smart Controller\", \"Set-Top-Box\", \"Streaming Device\", \"VoIP Phone\", \"Printer\", \"PDU\"]",
       "description": "Every device class that generally cannot run an agent: cameras, printers, phones, building controllers, smart-home hardware. None of it will ever appear in an EDR console, so for most organisations this is the part of the estate no security tool inventories.",
@@ -586,6 +602,7 @@
     {
       "id": "network-infrastructure",
       "title": "Network Infrastructure Inventory",
+      "savedFilterName": "Network Infrastructure",
       "category": "Estate Composition",
       "query": "asset.Type IN [\"Router\", \"Switch\", \"Wireless Access Point\", \"Gateway\", \"VPN Gateway\"]",
       "description": "The routing, switching and wireless estate as UAI sees it. Useful as a cross-check against whatever the network team believes is deployed, and as the denominator for network-device lifecycle work.",
@@ -602,6 +619,7 @@
     {
       "id": "cloud-assets",
       "title": "Cloud-Hosted Assets",
+      "savedFilterName": "Cloud-Hosted Assets",
       "category": "Estate Composition",
       "query": "asset.LocationType IN [\"Cloud\"]",
       "description": "Everything UAI places in a cloud provider rather than on-premises. The starting point for splitting any other finding along the cloud/on-prem boundary, which is usually where ownership changes hands.",
@@ -623,7 +641,22 @@
 
   const NS = 'uaiql';
   const STORE_KEY = 'uaiql.local';
-  const SAVED_FILTER_PREFIX = '[Library]';
+  const DEFAULT_SAVED_FILTER_PREFIX = '';
+  const PREFIX_KEY = `${NS}.prefix`;
+
+  /**
+   * Optional marker put in front of every Saved Filter this script creates.
+   * Off by default, so filters get clean names. To tag them (handy on a shared
+   * tenant, so they are easy to find and remove later), run this once in the
+   * page's DevTools console:  localStorage.setItem('uaiql.prefix', '[Library]')
+   * (removeItem turns it off again).
+   */
+  function savedFilterPrefix() {
+    try {
+      const v = localStorage.getItem(PREFIX_KEY);
+      return v === null ? DEFAULT_SAVED_FILTER_PREFIX : v.trim();
+    } catch { return DEFAULT_SAVED_FILTER_PREFIX; }
+  }
 
   /**
    * Asset Inventory is reachable on more than one route, and they are not
@@ -655,7 +688,8 @@
 
   function savedFilterNameFor(entry) {
     const base = entry.savedFilterName || entry.title;
-    const full = `${SAVED_FILTER_PREFIX} ${base}`;
+    const prefix = savedFilterPrefix();
+    const full = prefix ? `${prefix} ${base}` : base;
     return full.length <= SAVED_FILTER_MAX_NAME ? full : full.slice(0, SAVED_FILTER_MAX_NAME).trimEnd();
   }
 
@@ -905,8 +939,12 @@
         + `?hideBreadcrumbs=true&isAdvanced=true&advancedFilterValue=${encoded}`;
     },
 
-    /** Names of the Saved Filters currently visible in the picker. */
-    async listSavedFilterNames() {
+    /**
+     * Names of the Saved Filters currently visible in the picker that
+     * `isMine(line)` accepts. Matching is by predicate rather than by prefix,
+     * so it still works when the prefix has been turned off.
+     */
+    async listSavedFilterNames(isMine) {
       const link = this.button('Saved Filters');
       if (!link) return null;
       link.click();
@@ -920,8 +958,10 @@
         .filter((d) => d.offsetParent && d.scrollHeight > d.clientHeight + 50)
         .pop();
       const names = new Set();
-      const harvest = () => (document.body.innerText.match(/^.*\[Library\].*$/gm) || [])
-        .forEach((s) => names.add(s.trim()));
+      const harvest = () => document.body.innerText.split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s && isMine(s))
+        .forEach((s) => names.add(s));
       harvest();
       for (let i = 0; pane && i < 30; i++) {
         pane.scrollTop += pane.clientHeight * 0.8;
@@ -1207,7 +1247,9 @@
 
     const ok = W.confirm(
       `Create ${eligible.length} Saved Filters in the tenant you are signed in to?\n\n`
-      + `Each is named with the "${SAVED_FILTER_PREFIX}" prefix so they are easy to find and remove.\n\n`
+      + (savedFilterPrefix()
+        ? `Each is named with the "${savedFilterPrefix()}" prefix so they are easy to find and remove.\n\n`
+        : `They are named after the queries, with no prefix, so look for them by name when you want to remove them.\n\n`)
       + (skipped ? `${skipped} parameterised queries are skipped — saving them would freeze today's date into the filter.\n\n` : '')
       + `This writes to a shared tenant. Do not run it against a customer's production tenant without their agreement.`,
     );
@@ -1232,7 +1274,9 @@
 
     // The app accepts a save silently and then discards it in some cases, so
     // read the list back rather than trusting that clicking Save worked.
-    const actual = await adapter.listSavedFilterNames();
+    const actual = await adapter.listSavedFilterNames(
+      (line) => [...wanted.keys()].some((name) => line.includes(name)),
+    );
     if (actual) {
       for (const [name, title] of wanted) {
         const present = [...actual].some((n) => n.includes(name));

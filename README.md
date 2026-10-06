@@ -121,11 +121,11 @@ There is an **Install as Saved Filters…** button at the bottom of the panel. I
 Read this before you use it:
 
 - It **writes to whichever tenant you are signed in to**. That is a shared, visible change — not a local one.
-- Everything it creates is named with a `[Library]` prefix so it is obvious what came from here and easy to remove.
+- Filters are named after the queries, with short names that fit the product's 50-character limit. If you want them tagged so they are easy to find and remove from a shared tenant, run `localStorage.setItem('uaiql.prefix', '[Library]')` in the page's DevTools console before installing.
 - Queries with editable boxes are skipped, because saving one would freeze today's date into it and quietly go stale.
 - **Do not run it against a customer's production tenant** without asking them first.
 
-To remove them afterwards: **Saved Filters → See All**, then use the row menu (⋮) → **Delete** on each `[Library]` entry. Delete happens immediately, with no confirmation prompt.
+To remove them afterwards: **Saved Filters → See All**, then use the row menu (⋮) → **Delete** on each filter this tool created (the names match the `savedFilterName` or title in `queries/catalog.json`, or carry your prefix if you set one). Delete happens immediately, with no confirmation prompt.
 
 This flow has been run end to end against a live tenant — all 22 eligible queries created successfully.
 

@@ -45,7 +45,22 @@
 
   const NS = 'uaiql';
   const STORE_KEY = 'uaiql.local';
-  const SAVED_FILTER_PREFIX = '[Library]';
+  const DEFAULT_SAVED_FILTER_PREFIX = '';
+  const PREFIX_KEY = `${NS}.prefix`;
+
+  /**
+   * Optional marker put in front of every Saved Filter this script creates.
+   * Off by default, so filters get clean names. To tag them (handy on a shared
+   * tenant, so they are easy to find and remove later), run this once in the
+   * page's DevTools console:  localStorage.setItem('uaiql.prefix', '[Library]')
+   * (removeItem turns it off again).
+   */
+  function savedFilterPrefix() {
+    try {
+      const v = localStorage.getItem(PREFIX_KEY);
+      return v === null ? DEFAULT_SAVED_FILTER_PREFIX : v.trim();
+    } catch { return DEFAULT_SAVED_FILTER_PREFIX; }
+  }
 
   /**
    * Asset Inventory is reachable on more than one route, and they are not
@@ -77,7 +92,8 @@
 
   function savedFilterNameFor(entry) {
     const base = entry.savedFilterName || entry.title;
-    const full = `${SAVED_FILTER_PREFIX} ${base}`;
+    const prefix = savedFilterPrefix();
+    const full = prefix ? `${prefix} ${base}` : base;
     return full.length <= SAVED_FILTER_MAX_NAME ? full : full.slice(0, SAVED_FILTER_MAX_NAME).trimEnd();
   }
 
@@ -327,8 +343,12 @@
         + `?hideBreadcrumbs=true&isAdvanced=true&advancedFilterValue=${encoded}`;
     },
 
-    /** Names of the Saved Filters currently visible in the picker. */
-    async listSavedFilterNames() {
+    /**
+     * Names of the Saved Filters currently visible in the picker that
+     * `isMine(line)` accepts. Matching is by predicate rather than by prefix,
+     * so it still works when the prefix has been turned off.
+     */
+    async listSavedFilterNames(isMine) {
       const link = this.button('Saved Filters');
       if (!link) return null;
       link.click();
@@ -342,8 +362,10 @@
         .filter((d) => d.offsetParent && d.scrollHeight > d.clientHeight + 50)
         .pop();
       const names = new Set();
-      const harvest = () => (document.body.innerText.match(/^.*\[Library\].*$/gm) || [])
-        .forEach((s) => names.add(s.trim()));
+      const harvest = () => document.body.innerText.split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s && isMine(s))
+        .forEach((s) => names.add(s));
       harvest();
       for (let i = 0; pane && i < 30; i++) {
         pane.scrollTop += pane.clientHeight * 0.8;
@@ -629,7 +651,9 @@
 
     const ok = W.confirm(
       `Create ${eligible.length} Saved Filters in the tenant you are signed in to?\n\n`
-      + `Each is named with the "${SAVED_FILTER_PREFIX}" prefix so they are easy to find and remove.\n\n`
+      + (savedFilterPrefix()
+        ? `Each is named with the "${savedFilterPrefix()}" prefix so they are easy to find and remove.\n\n`
+        : `They are named after the queries, with no prefix, so look for them by name when you want to remove them.\n\n`)
       + (skipped ? `${skipped} parameterised queries are skipped — saving them would freeze today's date into the filter.\n\n` : '')
       + `This writes to a shared tenant. Do not run it against a customer's production tenant without their agreement.`,
     );
@@ -654,7 +678,9 @@
 
     // The app accepts a save silently and then discards it in some cases, so
     // read the list back rather than trusting that clicking Save worked.
-    const actual = await adapter.listSavedFilterNames();
+    const actual = await adapter.listSavedFilterNames(
+      (line) => [...wanted.keys()].some((name) => line.includes(name)),
+    );
     if (actual) {
       for (const [name, title] of wanted) {
         const present = [...actual].some((n) => n.includes(name));
